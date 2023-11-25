@@ -1,14 +1,14 @@
 const express = require('express')
 const app = express()
-const cors=require('cors')
+const cors = require('cors')
 require('dotenv').config()
 var cookieParser = require('cookie-parser')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const port = process.env.PORT || 5000
 app.use(express.json())
 app.use(cors({
-      origin: ['http://localhost:5173'],
-  credentials:true,
+  origin: ['http://localhost:5173'],
+  credentials: true,
 }))
 app.use(cookieParser())
 
@@ -26,8 +26,9 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
 
-    const availableCamps= client.db("camp").collection("availableCamp");
-    const ParticipantCamps= client.db("camp").collection("participant");
+    const availableCamps = client.db("camp").collection("availableCamp");
+    const ParticipantCamps = client.db("camp").collection("participant");
+    const UserCamps = client.db("camp").collection("users");
 
     app.get('/availableCamps', async (req, res) => {
       let quer = {}
@@ -36,6 +37,16 @@ async function run() {
       }
       const cursor = availableCamps.find(quer)
       const result = await cursor.toArray()
+      res.send(result)
+    })
+    app.post('/user', async (req, res) => {
+      const data = req.body
+      const query={email: data.email}
+      const existingUser=await UserCamps.findOne(query)
+      if(existingUser){
+        return res.send({messege:'user already exists', insertedId:null})
+      }
+      const result = await UserCamps.insertOne(data)
       res.send(result)
     })
 
@@ -53,10 +64,22 @@ async function run() {
     })
     app.get('/participant', async (req, res) => {
       let quer = {}
-      console.log('user:', req.user)
       if (req.query.email) {
         quer = { email: req.query.email }
       }
+      app.get('/participant/:id', async (req, res) => {
+        const id = req.params.id
+        const query = { _id: new ObjectId(id) }
+        const result = await ParticipantCamps.findOne(query)
+        res.send(result)
+      })
+      app.delete('/participant/:id', async (req, res) => {
+        const id = req.params.id
+        const query = { _id: new ObjectId(id) }
+        const result = await ParticipantCamps.deleteOne(query)
+        res.send(result)
+      })
+
       const cursor = ParticipantCamps.find(quer)
       const result = await cursor.toArray()
       res.send(result)
