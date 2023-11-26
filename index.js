@@ -39,12 +39,23 @@ async function run() {
       const result = await cursor.toArray()
       res.send(result)
     })
+
+    app.get('/ParticipantCamp', async (req, res) => {
+      let quer = {}
+      if (req.query.category) {
+        quer = { category: req.query.category }
+      }
+      const cursor = ParticipantCamps.find(quer)
+      const result = await cursor.toArray()
+      res.send(result)
+    })
+    
     app.post('/user', async (req, res) => {
       const data = req.body
-      const query={email: data.email}
-      const existingUser=await UserCamps.findOne(query)
-      if(existingUser){
-        return res.send({messege:'user already exists', insertedId:null})
+      const query = { email: data.email }
+      const existingUser = await UserCamps.findOne(query)
+      if (existingUser) {
+        return res.send({ messege: 'user already exists', insertedId: null })
       }
       const result = await UserCamps.insertOne(data)
       res.send(result)
@@ -67,23 +78,24 @@ async function run() {
       if (req.query.email) {
         quer = { email: req.query.email }
       }
-      app.get('/participant/:id', async (req, res) => {
-        const id = req.params.id
-        const query = { _id: new ObjectId(id) }
-        const result = await ParticipantCamps.findOne(query)
-        res.send(result)
-      })
-      app.delete('/participant/:id', async (req, res) => {
-        const id = req.params.id
-        const query = { _id: new ObjectId(id) }
-        const result = await ParticipantCamps.deleteOne(query)
-        res.send(result)
-      })
-
       const cursor = ParticipantCamps.find(quer)
       const result = await cursor.toArray()
       res.send(result)
     })
+    app.get('/participant/:id', async (req, res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id) }
+      const result = await ParticipantCamps.findOne(query)
+      res.send(result)
+    })
+    app.delete('/participant/:id', async (req, res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id) }
+      const result = await ParticipantCamps.deleteOne(query)
+      res.send(result)
+    })
+
+
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
     // Send a ping to confirm a successful connection
