@@ -1,10 +1,12 @@
 const express = require('express')
 const app = express()
 const cors = require('cors')
-require('dotenv').config()
+require('dotenv').config();
+const jwt = require('jsonwebtoken');
 var cookieParser = require('cookie-parser')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const port = process.env.PORT || 5000
+
 app.use(express.json())
 app.use(cors({
   origin: ['http://localhost:5173'],
@@ -39,17 +41,27 @@ async function run() {
       const result = await cursor.toArray()
       res.send(result)
     })
+    app.post('/jwt', async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.JWT_TOKEN, { expiresIn: '1h' });
+      res.send({ token });
+    })
 
-    app.get('/ParticipantCamp', async (req, res) => {
-      let quer = {}
-      if (req.query.category) {
-        quer = { category: req.query.category }
-      }
-      const cursor = ParticipantCamps.find(quer)
+    app.get('/participantcamp', async (req, res) => {
+      console.log(req.headers)      
+      const cursor = ParticipantCamps.find()
       const result = await cursor.toArray()
       res.send(result)
     })
-    
+    app.post('/addcamp', async (req, res) => {
+      const document = {
+        ...req.body,
+        scheduledDateTime: new Date(),
+      };
+      const result = await availableCamps.insertOne(document)
+      res.send(result)
+    })
+
     app.post('/user', async (req, res) => {
       const data = req.body
       const query = { email: data.email }
@@ -58,6 +70,27 @@ async function run() {
         return res.send({ messege: 'user already exists', insertedId: null })
       }
       const result = await UserCamps.insertOne(data)
+      res.send(result)
+    })
+
+    app.put('/ubdateCamp/:id', async(req, res) => {
+      const id = req.params.id
+      const filter = { _id: new ObjectId(id) }
+      const options = { upsert: true };
+      const updatedProdect=req.body
+      const updated = {
+        $set: {
+          campName: updatedProdect.campName,
+          price: updatedProdect.price,
+          image: updatedProdect.image,
+          venueLocation: updatedProdect.venueLocation,
+          specializedServices: updatedProdect.specializedServices,
+          healthcare: updatedProdect.healthcare,
+           targetAudience: updatedProdect.targetAudience,   
+           longDescription: updatedProdect.longDescription,                
+        }
+      }
+      const result=await availableCamps.updateOne(filter,updated,options);
       res.send(result)
     })
 
@@ -92,6 +125,12 @@ async function run() {
       const id = req.params.id
       const query = { _id: new ObjectId(id) }
       const result = await ParticipantCamps.deleteOne(query)
+      res.send(result)
+    })
+    app.delete('/deletecamp/:id', async (req, res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id) }
+      const result = await availableCamps.deleteOne(query)
       res.send(result)
     })
 
