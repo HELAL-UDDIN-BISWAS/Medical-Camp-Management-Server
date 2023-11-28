@@ -4,12 +4,14 @@ const cors = require('cors')
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 var cookieParser = require('cookie-parser')
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId, Admin } = require('mongodb');
 const port = process.env.PORT || 5000
 
-app.use(express.json())
+app.use(express.json());
 app.use(cors({
-  origin: ['http://localhost:5173'],
+  origin: [
+    'http://localhost:5173',
+    'https://last-assignment-d82ca.web.app/'],
   credentials: true,
 }))
 app.use(cookieParser())
@@ -32,6 +34,27 @@ async function run() {
     const ParticipantCamps = client.db("camp").collection("participant");
     const UserCamps = client.db("camp").collection("users");
 
+    app.post('/jwt', async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.JWT_TOKEN, { expiresIn: '1h' });
+      res.send({ token });
+    })
+    const verifyToken = (req, res, next) => {
+      // console.log(req.headers.authorization)
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: 'unauthorized access' });
+      }
+      const token = req.headers.authorization.split(' ')[1];
+      console.log(token)
+      jwt.verify(token, process.env.JWT_TOKEN, (err, decoded) => {
+        if (err) {
+          return res.status(401).send({ message: 'unauthorized access' })
+        }
+        req.decoded = decoded;
+        next();
+      })
+    }
+
     app.get('/availableCamps', async (req, res) => {
       let quer = {}
       if (req.query.category) {
@@ -41,18 +64,13 @@ async function run() {
       const result = await cursor.toArray()
       res.send(result)
     })
-    app.post('/jwt', async (req, res) => {
-      const user = req.body;
-      const token = jwt.sign(user, process.env.JWT_TOKEN, { expiresIn: '1h' });
-      res.send({ token });
-    })
 
     app.get('/participantcamp', async (req, res) => {
-      console.log(req.headers)      
       const cursor = ParticipantCamps.find()
       const result = await cursor.toArray()
       res.send(result)
     })
+
     app.post('/addcamp', async (req, res) => {
       const document = {
         ...req.body,
@@ -71,13 +89,53 @@ async function run() {
       }
       const result = await UserCamps.insertOne(data)
       res.send(result)
+
     })
 
-    app.put('/ubdateCamp/:id', async(req, res) => {
+    app.get('/user/:email',verifyToken, async (req, res) => {
+      const email = req.params.email;
+      if (email !== req.decoded.email) {
+        res.status(403).send({message: 'unauthorized access'})
+      }
+      const query={email: email}
+      const user=await UserCamps .findOne(query)
+      let admin= false
+      if(user){
+        admin = user?.role === 'admin';
+      }
+      res.send({admin})
+
+    })
+
+    app.delete('/user/:id', async (req, res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id) }
+      const result = await UserCamps.deleteOne(query)
+      res.send(result)
+    })
+    app.get('/user', async (req, res) => {
+      const cursor = UserCamps.find()
+      const result = await cursor.toArray()
+      res.send(result)
+    })
+
+    app.patch('/user/admin/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          role: 'admin',
+        }
+      }
+      const result = await UserCamps.updateOne(filter, updatedDoc);
+      res.send(result)
+    })
+
+    app.put('/ubdateCamp/:id', async (req, res) => {
       const id = req.params.id
       const filter = { _id: new ObjectId(id) }
       const options = { upsert: true };
-      const updatedProdect=req.body
+      const updatedProdect = req.body
       const updated = {
         $set: {
           campName: updatedProdect.campName,
@@ -86,11 +144,11 @@ async function run() {
           venueLocation: updatedProdect.venueLocation,
           specializedServices: updatedProdect.specializedServices,
           healthcare: updatedProdect.healthcare,
-           targetAudience: updatedProdect.targetAudience,   
-           longDescription: updatedProdect.longDescription,                
+          targetAudience: updatedProdect.targetAudience,
+          longDescription: updatedProdect.longDescription,
         }
       }
-      const result=await availableCamps.updateOne(filter,updated,options);
+      const result = await availableCamps.updateOne(filter, updated, options);
       res.send(result)
     })
 
