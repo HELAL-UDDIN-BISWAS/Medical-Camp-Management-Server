@@ -82,7 +82,6 @@ async function run() {
         }
       };
       const deleteResult = await ParticipantCamps.deleteMany(query);
-
       res.send({ paymentResult, deleteResult });
     })
 
@@ -101,6 +100,7 @@ async function run() {
       })
     })
 
+   
     app.get('/participantcamp', async (req, res) => {
       const cursor = ParticipantCamps.find()
       const result = await cursor.toArray()
@@ -116,6 +116,17 @@ async function run() {
       res.send(result)
     })
 
+    
+    
+
+    app.get('/paymentstttt/:email', async (req, res) => {
+      console.log(req.params.body)
+      const query = { email: req.params.email }
+      const result = await UserPayment.find(query).toArray();
+      res.send(result);
+    })
+
+
     app.post('/user', async (req, res) => {
       const data = req.body
       const query = { email: data.email }
@@ -127,6 +138,8 @@ async function run() {
       res.send(result)
 
     })
+
+  
 
     app.get('/user/:email', verifyToken, async (req, res) => {
       const email = req.params.email;
