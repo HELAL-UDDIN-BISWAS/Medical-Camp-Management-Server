@@ -4,19 +4,23 @@ const cors = require('cors')
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 var cookieParser = require('cookie-parser')
-const { MongoClient, ServerApiVersion, ObjectId, Admin } = require('mongodb');
+const stripe = require("stripe")(`${process.env.STRIPE_SECRET_KEY}`);
+
+app.use(express.static("public"));
+app.use(express.json());
+
 const port = process.env.PORT || 5000
 
 app.use(express.json());
 app.use(cors({
   origin: [
     'http://localhost:5173',
-    'https://last-assignment-d82ca.web.app/'],
+    'https://last-assignment-d82ca.web.app'],
   credentials: true,
 }))
 app.use(cookieParser())
 
-
+const { MongoClient, ServerApiVersion, ObjectId, Admin } = require('mongodb');
 const uri = `mongodb+srv://${process.env.M_DB_USER}:${process.env.M_DB_PASS}@cluster0.dhtqvw7.mongodb.net/?retryWrites=true&w=majority`;
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -33,19 +37,21 @@ async function run() {
     const availableCamps = client.db("camp").collection("availableCamp");
     const ParticipantCamps = client.db("camp").collection("participant");
     const UserCamps = client.db("camp").collection("users");
+    const UserPayment = client.db("camp").collection("payment");
 
     app.post('/jwt', async (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.JWT_TOKEN, { expiresIn: '1h' });
       res.send({ token });
     })
+
     const verifyToken = (req, res, next) => {
       // console.log(req.headers.authorization)
       if (!req.headers.authorization) {
         return res.status(401).send({ message: 'unauthorized access' });
       }
       const token = req.headers.authorization.split(' ')[1];
-      console.log(token)
+      // console.log(token)
       jwt.verify(token, process.env.JWT_TOKEN, (err, decoded) => {
         if (err) {
           return res.status(401).send({ message: 'unauthorized access' })
@@ -63,6 +69,36 @@ async function run() {
       const cursor = availableCamps.find(quer)
       const result = await cursor.toArray()
       res.send(result)
+    })
+
+    // Payment-=-=-=-=-==-=-=-
+    app.post('/payments', async (req, res) => {
+      const payment = req.body;
+      const paymentResult = await UserPayment.insertOne(payment);
+      console.log('payment info', payment);
+      const query = {
+        _id: {
+          $in: payment.cartIds.map(id => new ObjectId(id))
+        }
+      };
+      const deleteResult = await ParticipantCamps.deleteMany(query);
+
+      res.send({ paymentResult, deleteResult });
+    })
+
+    app.post("/create-payment-intent", async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+      console.log(amount, 'aaaaaaaaaaaaaaaaaa')
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ['card']
+      })
+      res.send({
+        clientSecret: paymentIntent.client_secret
+      })
     })
 
     app.get('/participantcamp', async (req, res) => {
@@ -92,18 +128,18 @@ async function run() {
 
     })
 
-    app.get('/user/:email',verifyToken, async (req, res) => {
+    app.get('/user/:email', verifyToken, async (req, res) => {
       const email = req.params.email;
       if (email !== req.decoded.email) {
-        res.status(403).send({message: 'unauthorized access'})
+        res.status(403).send({ message: 'unauthorized access' })
       }
-      const query={email: email}
-      const user=await UserCamps .findOne(query)
-      let admin= false
-      if(user){
+      const query = { email: email }
+      const user = await UserCamps.findOne(query)
+      let admin = false
+      if (user) {
         admin = user?.role === 'admin';
       }
-      res.send({admin})
+      res.send({ admin })
 
     })
 
@@ -159,11 +195,14 @@ async function run() {
       res.send(result)
     })
     app.post('/participant', async (req, res) => {
-      const data = req.body
-      console.log(data)
+      const data = {
+        ...req.body,
+        scheduledDateTime: new Date(),
+      };
       const result = await ParticipantCamps.insertOne(data)
       res.send(result)
     })
+
     app.get('/participant', async (req, res) => {
       let quer = {}
       if (req.query.email) {
