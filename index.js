@@ -38,6 +38,7 @@ async function run() {
     const ParticipantCamps = client.db("camp").collection("participant");
     const UserCamps = client.db("camp").collection("users");
     const UserPayment = client.db("camp").collection("payment");
+    const userRating = client.db("camp").collection("rating");
 
     app.post('/jwt', async (req, res) => {
       const user = req.body;
@@ -61,6 +62,22 @@ async function run() {
       })
     }
 
+    app.patch('/camp-count/:id',async(req,res)=>{
+      const id=req.params.id;
+      console.log("oooppp",id)
+      const existingCamp= await availableCamps.findOne({_id: new ObjectId(id)});
+      // const currentCount=existingCamp && existingCamp.count !== undefined ? existingCamp.count : 0;
+      const query= {_id: new ObjectId(id)}
+      const options={upsert: true};
+      const updatedDoc={
+        $set:{
+          count: currentCount + 1
+        }
+      }
+      const result =await availableCamps.updateOne(query,updatedDoc,options)
+      res.send(result)
+    })
+
     app.get('/availableCamps', async (req, res) => {
       let quer = {}
       if (req.query.category) {
@@ -70,7 +87,11 @@ async function run() {
       const result = await cursor.toArray()
       res.send(result)
     })
-
+    app.post('/rating', async (req, res) => {
+      const data = req.body
+      const result = await userRating.insertOne(data)
+      res.send(result)
+    })
     // Payment-=-=-=-=-==-=-=-
     app.post('/payments', async (req, res) => {
       const payment = req.body;
@@ -101,6 +122,11 @@ async function run() {
     })
 
    
+    app.get('/rating', async (req, res) => {
+      const cursor = userRating.find()
+      const result = await cursor.toArray()
+      res.send(result)
+    })
     app.get('/participantcamp', async (req, res) => {
       const cursor = ParticipantCamps.find()
       const result = await cursor.toArray()
@@ -120,7 +146,7 @@ async function run() {
     
 
     app.get('/paymentstttt/:email', async (req, res) => {
-      console.log(req.params.body)
+      
       const query = { email: req.params.email }
       const result = await UserPayment.find(query).toArray();
       res.send(result);
