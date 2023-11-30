@@ -240,10 +240,8 @@ async function run() {
       const result = await ParticipantCamps.findOne(query)
       res.send(result)
     })
-    app.get('/six-camps',async(req,res)=>{
-   const result=await availableCamps.find().limit(6).sort({count:-1}).toArray();
-   res.send(result)
-    })
+
+
     
     app.patch('/camp-count/:id',async(req,res)=>{
       const id=req.params.id;
@@ -268,7 +266,6 @@ async function run() {
       res.send(result)
     })
 
-  
     app.delete('/deletecamp/:id', async (req, res) => {
       const id = req.params.id
       const query = { _id: new ObjectId(id) }
