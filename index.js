@@ -62,22 +62,7 @@ async function run() {
       })
     }
 
-    app.patch('/camp-count/:id',async(req,res)=>{
-      const id=req.params.id;
-      console.log("oooppp",id)
-      const existingCamp= await availableCamps.findOne({_id: new ObjectId(id)});
-      // const currentCount=existingCamp && existingCamp.count !== undefined ? existingCamp.count : 0;
-      const query= {_id: new ObjectId(id)}
-      const options={upsert: true};
-      const updatedDoc={
-        $set:{
-          count: currentCount + 1
-        }
-      }
-      const result =await availableCamps.updateOne(query,updatedDoc,options)
-      res.send(result)
-    })
-
+    
     app.get('/availableCamps', async (req, res) => {
       let quer = {}
       if (req.query.category) {
@@ -143,8 +128,6 @@ async function run() {
     })
 
     
-    
-
     app.get('/paymentstttt/:email', async (req, res) => {
       
       const query = { email: req.params.email }
@@ -255,6 +238,25 @@ async function run() {
       const id = req.params.id
       const query = { _id: new ObjectId(id) }
       const result = await ParticipantCamps.findOne(query)
+      res.send(result)
+    })
+    app.get('/six-camps',async(req,res)=>{
+   const result=await availableCamps.find().limit(6).sort({count:-1}).toArray();
+   res.send(result)
+    })
+    app.patch('/camp-count/:id',async(req,res)=>{
+      const id=req.params.id;
+      console.log("oooppp",id)
+      const existingCamp= await availableCamps.findOne({_id: new ObjectId(id)});
+      const currentCount=existingCamp && existingCamp.count !== undefined ? existingCamp.count : 0;
+      const query= {_id: new ObjectId(id)}
+      const options={upsert: true};
+      const updatedDoc={
+        $set:{
+          count: currentCount + 1
+        }
+      }
+      const result =await availableCamps.updateOne(query,updatedDoc,options)
       res.send(result)
     })
     app.delete('/participant/:id', async (req, res) => {
