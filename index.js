@@ -244,6 +244,7 @@ async function run() {
    const result=await availableCamps.find().limit(6).sort({count:-1}).toArray();
    res.send(result)
     })
+    
     app.patch('/camp-count/:id',async(req,res)=>{
       const id=req.params.id;
       console.log("oooppp",id)
@@ -265,12 +266,7 @@ async function run() {
       const result = await ParticipantCamps.deleteOne(query)
       res.send(result)
     })
-    app.delete('/deletecamp/:id', async (req, res) => {
-      const id = req.params.id
-      const query = { _id: new ObjectId(id) }
-      const result = await availableCamps.deleteOne(query)
-      res.send(result)
-    })
+  
 
 
     // Connect the client to the server	(optional starting in v4.7)
